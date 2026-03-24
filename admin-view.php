@@ -1,3 +1,4 @@
+<?php defined( 'ABSPATH' ) || exit; ?>
 <div class="wrap">
 	<div class="icon32" id="icon-options-general">
 		<br>

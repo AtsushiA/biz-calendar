@@ -1,9 +1,11 @@
 <?php
+defined( 'ABSPATH' ) || exit;
+
 /*
  Plugin Name: Biz Calendar
 Plugin URI: http://residentbird.main.jp/bizplugin/
 Description: 営業日・イベントカレンダーをウィジェットに表示するプラグインです。
-Version: 2.2.0
+Version: 2.3.1
 Author:Hideki Tanaka
 Author URI: http://residentbird.main.jp/bizplugin/
 */
@@ -13,7 +15,7 @@ new BizCalendarPlugin();
 
 class BC
 {
-	const VERSION = "2.2.0";
+	const VERSION = '2.3.1';
 	const SHORTCODE = "showpostlist";
 	const OPTIONS = "bizcalendar_options";
 	const NATIONAL_HOLIDAY = "biz_national_holiday";
@@ -49,10 +51,15 @@ class BC
 
 	public static function enqueue_admin_js(){
 		wp_enqueue_script( 'biz-cal-admin-js', plugins_url('upload-holidays.js', __FILE__ ), array( 'jquery' ), self::VERSION, true );
-		wp_localize_script( 'biz-cal-admin-js', 'bizcalAjax', array(
-				'ajaxurl' => admin_url('admin-ajax.php'),
-				'action' => 'upload_holidays',
-		));
+		wp_localize_script(
+			'biz-cal-admin-js',
+			'bizcalAjax',
+			array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'action'  => 'upload_holidays',
+				'nonce'   => wp_create_nonce( 'biz_upload_holidays' ),
+			)
+		);
 	}
 }
 
@@ -61,15 +68,25 @@ class BC
  */
 class BizCalendarPlugin{
 
-	var $option_name = 'bizcalendar_options';
-	var $adminUi;
+	/**
+	 * オプション名
+	 *
+	 * @var string
+	 */
+	public $option_name = 'bizcalendar_options';
+	/**
+	 * 管理画面UI
+	 *
+	 * @var AdminUi
+	 */
+	public $admin_ui;
 
 	public function __construct(){
-		register_activation_hook(__FILE__, array(&$this,'on_activation'));
-		add_action( 'admin_init', array(&$this,'on_admin_init') );
-		add_action( 'admin_menu', array(&$this, 'on_admin_menu'));
-		add_action( 'wp_enqueue_scripts', array(&$this,'on_enqueue_scripts'));
-		add_action( 'wp_ajax_upload_holidays', array(&$this,'upload_holidays') );
+		register_activation_hook( __FILE__, array( $this, 'on_activation' ) );
+		add_action( 'admin_init', array( $this, 'on_admin_init' ) );
+		add_action( 'admin_menu', array( $this, 'on_admin_menu' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'on_enqueue_scripts' ) );
+		add_action( 'wp_ajax_upload_holidays', array( $this, 'upload_holidays' ) );
 		add_action(
 			'widgets_init',
 			function () {
@@ -123,7 +140,7 @@ class BizCalendarPlugin{
 
 	function on_admin_init() {
 		BC::enqueue_admin_js();
-		$this->adminUi = new AdminUi( __FILE__ );
+		$this->admin_ui = new AdminUi( __FILE__ );
 	}
 
 	public function on_admin_menu() {
@@ -137,10 +154,12 @@ class BizCalendarPlugin{
 	}
 
 	function upload_holidays() {
+		check_ajax_referer( 'biz_upload_holidays', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => '権限がありません' ), 403 );
+		}
 		nocache_headers();
-		header( "Content-Type: application/json; charset=$charset" );
-		echo json_encode( $this->import_holidays() );
-		die();
+		wp_send_json( $this->import_holidays() );
 	}
 
 	private function import_holidays(){
@@ -223,16 +242,14 @@ class BizCalendarWidget extends WP_Widget {
 	 * @param array $instance Saved values from database.
 	 */
 	public function widget( $args, $instance ) {
-		extract( $args );
 		$title = apply_filters( 'widget_title', $instance['title'] );
 
-		echo $before_widget;
-		if ( ! empty( $title ) ){
-			echo $before_title . $title . $after_title;
+		echo wp_kses_post( $args['before_widget'] );
+		if ( ! empty( $title ) ) {
+			echo wp_kses_post( $args['before_title'] ) . esc_html( $title ) . wp_kses_post( $args['after_title'] );
 		}
-		$options = get_option( 'bizcalendar_options' );
 		echo "<div id='biz_calendar'></div>";
-		echo $after_widget;
+		echo wp_kses_post( $args['after_widget'] );
 	}
 
 	/**
