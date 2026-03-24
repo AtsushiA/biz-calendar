@@ -3,7 +3,7 @@
  Plugin Name: Biz Calendar
 Plugin URI: http://residentbird.main.jp/bizplugin/
 Description: 営業日・イベントカレンダーをウィジェットに表示するプラグインです。
-Version: 2.0.1
+Version: 2.2.0
 Author:Hideki Tanaka
 Author URI: http://residentbird.main.jp/bizplugin/
 */
@@ -13,7 +13,7 @@ new BizCalendarPlugin();
 
 class BC
 {
-	const VERSION = "2.0.1";
+	const VERSION = "2.2.0";
 	const SHORTCODE = "showpostlist";
 	const OPTIONS = "bizcalendar_options";
 	const NATIONAL_HOLIDAY = "biz_national_holiday";
